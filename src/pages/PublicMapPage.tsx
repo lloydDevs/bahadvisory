@@ -119,7 +119,9 @@ export default function PublicMapPage() {
     setSelected(zone);
   };
 
-  const showClusters = zoom < CLUSTER_ZOOM_THRESHOLD;
+  // Clustering disabled — zones always render as individual scattered pins,
+  // even when zoomed out.
+  const showClusters = false;
 
   return (
     <div className="public-map-page">

@@ -116,13 +116,13 @@ export interface WaterLevelBand {
  * the rest of the app works in meters.
  */
 export const WATER_LEVEL_BANDS: WaterLevelBand[] = [
-  { min: 0, max: 0.2, label: "Normal", laymanLabel: "Gutter level", inches: 8, mmdaClass: "PATV", color: "#bfe3ff" },
-  { min: 0.2, max: 0.25, label: "Low", laymanLabel: "Half-knee level", inches: 10, mmdaClass: "PATV", color: "#94d0f7" },
+  { min: 0, max: 0.2, label: "Normal", laymanLabel: "Gutter level", inches: 8, mmdaClass: "PATV", color: "#3aa373" },
+  { min: 0.2, max: 0.25, label: "Low", laymanLabel: "Half-knee level", inches: 10, mmdaClass: "PATV", color: "#1f8a5c" },
   { min: 0.25, max: 0.33, label: "Caution", laymanLabel: "Half-tire level", inches: 13, mmdaClass: "NPLV", color: "#5eb0ee" },
-  { min: 0.33, max: 0.48, label: "Moderate", laymanLabel: "Knee level", inches: 19, mmdaClass: "NPLV", color: "#3f9be0" },
-  { min: 0.48, max: 0.66, label: "High", laymanLabel: "Tire level", inches: 26, mmdaClass: "NPATV", color: "#2778c2" },
-  { min: 0.66, max: 0.94, label: "Very High", laymanLabel: "Waist level", inches: 37, mmdaClass: "NPATV", color: "#1c5fa8" },
-  { min: 0.94, max: Infinity, label: "Severe", laymanLabel: "Chest level & above", inches: 45, mmdaClass: "NPATV", color: "#0b2f5c" },
+  { min: 0.33, max: 0.48, label: "Moderate", laymanLabel: "Knee level", inches: 19, mmdaClass: "NPLV", color: "#2778c2" },
+  { min: 0.48, max: 0.66, label: "High", laymanLabel: "Tire level", inches: 26, mmdaClass: "NPATV", color: "#e08a1e" },
+  { min: 0.66, max: 0.94, label: "Very High", laymanLabel: "Waist level", inches: 37, mmdaClass: "NPATV", color: "#d64545" },
+  { min: 0.94, max: Infinity, label: "Severe", laymanLabel: "Chest level & above", inches: 45, mmdaClass: "NPATV", color: "#7a1f2b" },
 ];
 
 export const MMDA_CLASS_LABELS: Record<WaterLevelBand["mmdaClass"], string> = {

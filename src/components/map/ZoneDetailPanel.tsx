@@ -7,7 +7,7 @@ import {
   VEHICLE_LABELS,
   VehicleKey,
 } from "../../types";
-import { formatWaterLevel, getWaterLevelBand } from "../../utils/passability";
+import { formatWaterLevel, getHeroAccent, getWaterLevelBand } from "../../utils/passability";
 
 interface Props {
   zone: FloodZone | null;
@@ -28,27 +28,42 @@ function trendLabel(zone: FloodZone) {
   return `${arrow} ${sign}${zone.trendDeltaM.toFixed(2)}m / hr`;
 }
 
-/** Simple animated gauge — fill height reflects water level vs a 2m reference scale. */
-function WaterGauge({ waterLevelM }: { waterLevelM: number }) {
+/** Photo hero — background flood photo tinted by severity, with the zone
+ *  name/area and level reading overlaid. Replaces the plain vertical tube
+ *  gauge and folds the old white header bar into the image so there's no
+ *  blank space above the photo. */
+function FloodHero({
+  waterLevelM,
+  name,
+  area,
+  onClose,
+}: {
+  waterLevelM: number;
+  name: string;
+  area: string;
+  onClose: () => void;
+}) {
   const band = getWaterLevelBand(waterLevelM);
-  const pct = Math.min((waterLevelM / 2) * 100, 100);
+  const accent = getHeroAccent(band);
   return (
-    <div className="water-gauge">
-      <div className="water-gauge__track">
-        <div
-          className="water-gauge__fill"
-          style={{ height: `${pct}%`, background: band.color }}
-        />
-        {/* reference lines for vehicle clearances, aligned to the MMDA gauge */}
-        <div className="water-gauge__mark" style={{ bottom: "12.5%" }} title="Bike risk (0.25m — Half-Knee level)" />
-        <div className="water-gauge__mark" style={{ bottom: "24%" }} title="Motor risk (0.48m — Knee level)" />
-        <div className="water-gauge__mark" style={{ bottom: "33%" }} title="4-wheel risk (0.66m — Tire level)" />
-        <div className="water-gauge__mark" style={{ bottom: "47%" }} title="SUV/pickup risk (0.94m — Waist level)" />
-        <div className="water-gauge__mark" style={{ bottom: "57%" }} title="Truck risk (1.14m — Chest level)" />
+    <div className="flood-hero" style={{ backgroundImage: "url(/img/bg-for-area.png)" }}>
+      <div className="flood-hero__tint" style={{ background: accent.tint }} />
+
+      <div className="flood-hero__header">
+        <div>
+          <h3 className="flood-hero__title">{name}</h3>
+          <span className="flood-hero__area">{area}</span>
+        </div>
+        <button className="flood-hero__close" onClick={onClose} aria-label="Close">
+          ×
+        </button>
       </div>
-      <div className="water-gauge__value">
-        {waterLevelM.toFixed(2)}m
-        <span className="water-gauge__layman">{band.laymanLabel}</span>
+
+      <div className="flood-hero__content" style={{ color: accent.text }}>
+        <div className="flood-hero__value">{waterLevelM.toFixed(2)}m</div>
+        <div className="flood-hero__label">
+          <span aria-hidden="true">〜</span> {band.laymanLabel}
+        </div>
       </div>
     </div>
   );
@@ -60,18 +75,13 @@ export default function ZoneDetailPanel({ zone, onClose }: Props) {
 
   return (
     <div className="zone-panel">
-      <div className="zone-panel__header">
-        <div>
-          <h3>{zone.name}</h3>
-          <span className="zone-panel__area">{zone.area}</span>
-        </div>
-        <button className="zone-panel__close" onClick={onClose} aria-label="Close">
-          ×
-        </button>
-      </div>
-
       <div className="zone-panel__body">
-        <WaterGauge waterLevelM={zone.waterLevelM} />
+        <FloodHero
+          waterLevelM={zone.waterLevelM}
+          name={zone.name}
+          area={zone.area}
+          onClose={onClose}
+        />
 
         <div className="zone-panel__stats">
           <div className="stat">

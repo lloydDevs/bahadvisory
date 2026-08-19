@@ -45,8 +45,7 @@ export function suggestRoadPassability(waterLevelM: number): RoadPassability {
   return "closed"; // Waist/Chest level — DRRM road-closure territory
 }
 
-export function getWaterLevelBand(waterLevelM: number): WaterLevelBand {
-  return (
+export function getWaterLevelBand(waterLevelM: number): WaterLevelBand {  return (
     WATER_LEVEL_BANDS.find((b) => waterLevelM >= b.min && waterLevelM < b.max) ??
     WATER_LEVEL_BANDS[WATER_LEVEL_BANDS.length - 1]
   );
@@ -72,4 +71,40 @@ export function severityColor(severity: number): string {
   const hue = 38 - t * 38; // 38 (orange) -> 0 (red)
   const light = 52 - t * 10; // slightly darker as it gets more severe
   return `hsl(${hue}, 85%, ${light}%)`;
+}
+
+/**
+ * Hero-card accent per water level band — a photo overlay tint + matching
+ * text color, so the zone detail hero reads as green/blue/orange/red at a
+ * glance (same severity story as the pin markers, tuned for a photo bg).
+ */
+export interface HeroAccent {
+  tint: string; // gradient overlay painted over the background photo
+  text: string; // color for the big number + layman label on top of it
+}
+
+export function getHeroAccent(band: WaterLevelBand): HeroAccent {
+  switch (band.mmdaClass) {
+    case "PATV":
+      return {
+        tint: "linear-gradient(180deg, rgba(15,110,86,0.15) 0%, rgba(15,110,86,0.75) 100%)",
+        text: "#eafff5",
+      };
+    case "NPLV":
+      return {
+        tint: "linear-gradient(180deg, rgba(24,95,165,0.2) 0%, rgba(12,68,124,0.8) 100%)",
+        text: "#eaf4ff",
+      };
+    case "NPATV":
+    default:
+      return band.min >= 0.94
+        ? {
+            tint: "linear-gradient(180deg, rgba(114,15,15,0.25) 0%, rgba(80,10,10,0.85) 100%)",
+            text: "#ffecec",
+          }
+        : {
+            tint: "linear-gradient(180deg, rgba(133,79,11,0.2) 0%, rgba(99,56,6,0.82) 100%)",
+            text: "#fff6e6",
+          };
+  }
 }
