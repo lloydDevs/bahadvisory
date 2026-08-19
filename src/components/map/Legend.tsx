@@ -37,7 +37,7 @@ export default function Legend() {
               </span>
             </button>
             {waterLevelOpen && (
-              <>
+              <div className="legend-section__scroll">
                 {WATER_LEVEL_BANDS.map((b) => (
                   <div className="legend-row" key={b.label}>
                     <span className="legend-swatch" style={{ background: b.color }} />
@@ -47,7 +47,7 @@ export default function Legend() {
                   </div>
                 ))}
                 <p className="legend-footnote">Reference: MMDA Flood Gauge</p>
-              </>
+              </div>
             )}
           </div>
           <div className="legend-section">

@@ -87,10 +87,10 @@ async function createDrrmAccount({ name, email, role, assignedArea }) {
 // Edit these values for each new account, then re-run this script.
 // ---------------------------------------------------------------------
 createDrrmAccount({
-  name: "CHANGE_ME",
-  email: "change_me@example.com",
-  role: "drrm_editor",
-  assignedArea: "CHANGE_ME",
+  name: "John John Bidon",
+  email: "john.john.bidon@minsu.edu.ph",
+  role: "admin",
+  assignedArea: "MinSU",
 })
   .then(() => process.exit(0))
   .catch((err) => {
