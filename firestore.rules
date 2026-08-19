@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny everything not explicitly allowed below.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Role/area come from custom claims — set ONLY server-side via the
+    // Admin SDK (see functions/createDrrmAccount). Never trust a
+    // client-writable field for authorization decisions.
+    function role() {
+      return request.auth.token.role;
+    }
+
+    function assignedArea() {
+      return request.auth.token.assignedArea;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && role() == 'admin';
+    }
+
+    function isDrrmEditor() {
+      return isSignedIn() && (role() == 'drrm_editor' || role() == 'admin');
+    }
+
+    function ownsArea(area) {
+      return isAdmin() || assignedArea() == area;
+    }
+
+    // ---- floodZones ----------------------------------------------------
+    // Public reads (no auth) power the live map. Writes require a signed-in
+    // DRRM editor/admin scoped to the zone's area, and validate the shape
+    // DRRM staff are expected to submit.
+    match /floodZones/{zoneId} {
+      allow read: if true;
+
+      allow create: if isDrrmEditor()
+        && ownsArea(request.resource.data.area)
+        && request.resource.data.name is string
+        && request.resource.data.waterLevelM is number
+        && request.resource.data.waterLevelM >= 0
+        && request.resource.data.trend in ['rising', 'falling', 'steady']
+        && request.resource.data.roadPassability in
+             ['passable', 'caution', 'not_passable', 'closed']
+        && request.resource.data.status in ['active', 'cleared']
+        && request.resource.data.updatedBy == request.auth.uid;
+
+      allow update: if isDrrmEditor()
+        && ownsArea(resource.data.area)
+        && ownsArea(request.resource.data.area)
+        && request.resource.data.updatedBy == request.auth.uid;
+
+      allow delete: if isDrrmEditor() && ownsArea(resource.data.area);
+    }
+
+    // ---- zoneHistory -----------------------------------------------------
+    // Public reads power the Recent Advisories feed. Writes are restricted
+    // to signed-in DRRM roles. Hardening note: a production rollout could
+    // move writes into a Cloud Function trigger on floodZones changes so
+    // history can never be skipped or forged by a client — but that
+    // requires the Blaze plan, so this project deliberately keeps writes
+    // client-side (still gated by these rules) to stay on Spark.
+    match /zoneHistory/{zoneId}/updates/{updateId} {
+      allow read: if true;
+      allow create: if isDrrmEditor() && request.resource.data.editorUid == request.auth.uid;
+      allow update, delete: if false; // history is append-only
+    }
+
+    // ---- users (DRRM staff directory) -------------------------------------
+    // Readable/writable only by admins; a user may read their own doc.
+    match /users/{uid} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+      allow write: if isAdmin();
+    }
+  }
+}

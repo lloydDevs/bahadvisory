@@ -1,0 +1,773 @@
+/* ============================================================
+   Bahadvisory — design tokens
+   Subject: live flood water + DRRM field operations in the PH.
+   Palette carries the water itself (tide navy → sky mist) with a
+   hazard-signal set (green/amber/red/maroon) reserved strictly for
+   passability status, never decoration.
+   Display face: Inter (extra-bold, tight tracking) for headings.
+   Utility face: JetBrains Mono for readings, timestamps, coordinates —
+   anything that behaves like a gauge readout.
+   ============================================================ */
+
+:root {
+  --mist: #eef3f8;
+  --surface: #ffffff;
+  --ink: #0c2340;
+  --ink-soft: #4a6079;
+  --tide: #0e7490;
+  --tide-deep: #0b2f5c;
+  --line: #d8e2ec;
+
+  --safe: #1f9d55;
+  --caution: #e08a1e;
+  --danger: #d64545;
+  --closed: #7a1f2b;
+
+  --radius: 10px;
+  --shadow: 0 8px 24px rgba(12, 35, 64, 0.1);
+  --font-display: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  font-family: var(--font-display);
+  background: var(--mist);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.4em;
+  color: var(--ink);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--tide-deep);
+  color: white;
+  padding: 0.6em 1.1em;
+  font-weight: 600;
+  font-size: 0.92rem;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+button:hover { background: var(--tide); }
+button:active { transform: scale(0.97); }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid var(--tide);
+  outline-offset: 2px;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--ink);
+  border: 1.5px solid var(--line);
+}
+.btn-secondary:hover { background: var(--mist); }
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 0.55em 0.7em;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  width: 100%;
+}
+
+label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 0.9em;
+}
+label > input, label > select, label > textarea { margin-top: 0.35em; }
+
+.muted { color: var(--ink-soft); font-size: 0.9rem; }
+.error-text { color: var(--danger); font-size: 0.88rem; font-weight: 600; }
+
+/* ---------------- Public map page ---------------- */
+
+.public-map-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7em 1.4em;
+  background: var(--surface);
+  color: var(--ink);
+  z-index: 20;
+  position: relative;
+  box-shadow: var(--shadow);
+  border-bottom: 1px solid var(--line);
+}
+.topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+.topbar__logo { height: 34px; width: auto; display: block; }
+.topbar__text-logo { height: 22px; width: auto; display: block; }
+.topbar__layers { display: flex; gap: 0.5em; }
+.layer-toggle {
+  background: var(--mist);
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  padding: 0.45em 0.85em;
+  border: 1px solid var(--line);
+}
+.layer-toggle--on { background: var(--tide); color: white; border-color: var(--tide); }
+.topbar__meta { font-family: var(--font-mono); font-size: 0.85rem; color: var(--ink-soft); }
+
+.public-map-page__body {
+  position: relative;
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.map-wrap { position: relative; flex: 1; }
+.leaflet-map { height: 100%; width: 100%; }
+.leaflet-map--form { height: 360px; border-radius: var(--radius); overflow: hidden; }
+
+.map-error {
+  position: absolute;
+  top: 12px; left: 50%; transform: translateX(-50%);
+  background: var(--danger); color: white;
+  padding: 0.5em 1em; border-radius: var(--radius);
+  z-index: 500; font-size: 0.85rem;
+}
+.map-loading-chip {
+  position: absolute;
+  bottom: 16px; left: 16px;
+  background: var(--surface);
+  padding: 0.5em 1em;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  font-size: 0.82rem;
+  z-index: 500;
+}
+
+/* Zone overlay pulse — the signature motion element. Severity scales
+   both the animation speed (set via --pulse-duration inline) and the
+   glow intensity. */
+.zone-overlay { animation: zone-pulse var(--pulse-duration, 3s) ease-in-out infinite; }
+.zone-overlay--selected { filter: drop-shadow(0 0 6px rgba(14,116,144,0.8)); }
+@keyframes zone-pulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.55; }
+}
+
+.recenter-btn {
+  position: absolute;
+  bottom: 16px; right: 16px;
+  z-index: 500;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem;
+  padding: 0;
+}
+.recenter-btn:hover { background: var(--mist); }
+.recenter-btn__icon.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------------- Legend ---------------- */
+
+.legend-panel {
+  position: absolute;
+  top: 16px; right: 16px;
+  z-index: 500;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 0.9em 1em;
+  width: 190px;
+  max-width: 50vw;
+  font-size: 0.82rem;
+}
+/* Collapsed state renders as a small labeled pill (matches recenter-btn's
+   floating-control language) instead of an empty white box. */
+.legend-panel--collapsed {
+  width: auto;
+  max-width: none;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.legend-panel__toggle {
+  background: var(--surface); color: var(--ink);
+  font-size: 0.78rem; font-weight: 700;
+  padding: 0.55em 0.9em;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  display: inline-flex; align-items: center; gap: 0.4em;
+  border: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.legend-panel__toggle:hover { background: var(--mist); }
+.legend-panel__toggle:focus-visible {
+  outline: 2px solid var(--tide);
+  outline-offset: 2px;
+}
+.legend-panel--collapsed .legend-panel__toggle::before {
+  content: "🗺️";
+  font-size: 0.9em;
+}
+.legend-panel:not(.legend-panel--collapsed) .legend-panel__toggle {
+  width: 100%;
+  justify-content: space-between;
+  box-shadow: none;
+  padding: 0.2em 0.3em;
+}
+.legend-section { margin-top: 0.7em; }
+.legend-section h4 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin-bottom: 0.4em; }
+.legend-section__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+.legend-section__toggle:focus-visible {
+  outline: 2px solid var(--tide);
+  outline-offset: 2px;
+}
+.legend-section__toggle h4 { margin-bottom: 0; }
+.legend-section__chevron {
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+  transform: rotate(-90deg);
+}
+.legend-section__chevron--open { transform: rotate(0deg); }
+.legend-row { display: flex; align-items: center; gap: 0.5em; margin-bottom: 0.25em; margin-top: 0.4em; }
+.legend-footnote { font-size: 0.68rem; color: var(--ink-soft); margin: 0.3em 0 0; font-style: italic; }
+/* Vehicle chips: fixed 3-column grid so 5 entries always wrap to exactly
+   two lines (3 + 2), keeping the card narrow instead of growing wide to
+   fit a flex-wrap row. */
+.legend-row--wrap {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.3em;
+}
+.legend-swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block; flex-shrink: 0; }
+.legend-swatch--ring { background: transparent; border: 3px solid; border-radius: 50%; }
+.legend-chip {
+  background: var(--mist); border-radius: 999px; padding: 0.2em 0.4em;
+  font-size: 0.68rem; text-align: center; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ---------------- Zone detail panel ---------------- */
+
+.zone-panel {
+  width: 340px;
+  background: var(--surface);
+  box-shadow: -4px 0 16px rgba(12,35,64,0.08);
+  overflow-y: auto;
+  /* Leaflet's own panes (markers, tooltips, popups) run z-index ~400-700
+     internally, so this has to clear that range or the panel silently
+     renders behind the map whenever it's positioned absolutely (mobile). */
+  z-index: 900;
+  animation: slide-in 0.25s ease-out;
+}
+@keyframes slide-in { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+.zone-panel__header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 1.1em 1.2em 0.6em;
+  border-bottom: 1px solid var(--line);
+}
+.zone-panel__area { font-size: 0.8rem; color: var(--ink-soft); }
+.zone-panel__close { background: transparent; color: var(--ink-soft); font-size: 1.4rem; padding: 0 0.3em; }
+.zone-panel__body { padding: 1.1em 1.2em; }
+.zone-panel__section { margin-top: 1.1em; }
+.zone-panel__section h4 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); }
+.zone-panel__notes { font-size: 0.9rem; line-height: 1.5; }
+.zone-panel__updated { margin-top: 1.2em; font-size: 0.75rem; color: var(--ink-soft); font-family: var(--font-mono); }
+
+.water-gauge { display: flex; align-items: flex-end; gap: 0.8em; }
+.water-gauge__track {
+  position: relative;
+  width: 46px; height: 140px;
+  background: var(--mist);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1.5px solid var(--line);
+}
+.water-gauge__fill {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  transition: height 0.4s ease;
+  animation: gauge-shimmer 4s ease-in-out infinite;
+}
+@keyframes gauge-shimmer { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.08); } }
+.water-gauge__mark {
+  position: absolute; left: 0; right: 0; height: 1px;
+  background: rgba(12,35,64,0.25);
+}
+.water-gauge__value { font-family: var(--font-mono); font-weight: 700; font-size: 1.1rem; }
+.water-gauge__layman {
+  display: block;
+  font-family: var(--font-body, inherit);
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin-top: 0.15em;
+}
+
+.zone-panel__stats { display: flex; flex-direction: column; gap: 0.7em; margin-top: 1em; }
+.stat {
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  align-items: start;
+  gap: 0.6em;
+  font-size: 0.85rem;
+}
+.stat__label { color: var(--ink-soft); font-size: 0.78rem; padding-top: 0.1em; }
+.stat__value {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  text-align: right;
+  min-width: 0;
+  word-break: break-word;
+}
+.stat__code { display: block; }
+.stat__sub {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+  margin-top: 0.1em;
+}
+.stat__badge {
+  color: white; padding: 0.2em 0.7em; border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+  justify-self: end;
+}
+
+.vehicle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5em; margin-top: 0.5em; }
+.vehicle-chip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.3em 0.4em;
+  padding: 0.45em 0.6em; border-radius: 8px; font-size: 0.82rem;
+  border: 1.5px solid var(--line);
+}
+.vehicle-chip--ok { border-color: var(--safe); background: rgba(31,157,85,0.08); }
+.vehicle-chip--no { border-color: var(--danger); background: rgba(214,69,69,0.08); }
+.vehicle-chip__status {
+  flex-basis: 100%;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.01em;
+}
+.vehicle-chip--ok .vehicle-chip__status { color: var(--safe); }
+.vehicle-chip--no .vehicle-chip__status { color: var(--danger); }
+.vehicle-chip__mark { margin-left: auto; font-weight: 700; }
+.vehicle-chip--ok .vehicle-chip__mark { color: var(--safe); }
+.vehicle-chip--no .vehicle-chip__mark { color: var(--danger); }
+
+.forecast-list { list-style: none; padding: 0; margin: 0.4em 0 0; font-family: var(--font-mono); font-size: 0.82rem; }
+.forecast-list li { padding: 0.25em 0; border-bottom: 1px dashed var(--line); }
+
+/* ---------------- Advisories ---------------- */
+
+.advisories-page { max-width: 720px; margin: 0 auto; padding: 2em 1.2em; }
+.advisories-list { display: flex; flex-direction: column; gap: 0.8em; }
+.advisory-card {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 0.9em 1.1em;
+}
+.advisory-card__tag {
+  display: inline-block; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--tide); margin-bottom: 0.3em;
+}
+.advisory-card__meta { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-soft); }
+
+/* ---------------- Login ---------------- */
+
+.login-page {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, var(--tide-deep), var(--ink) 70%);
+}
+.login-card {
+  background: var(--surface); border-radius: 14px; box-shadow: var(--shadow);
+  padding: 2.2em 2em; width: 340px;
+}
+.login-card__logo { height: 64px; width: auto; display: block; margin-bottom: 1em; }
+.login-card__subtitle { color: var(--ink-soft); font-size: 0.88rem; margin-bottom: 1.4em; }
+.login-card button[type="submit"] { width: 100%; margin-top: 0.4em; }
+.login-card__back { display: block; margin-top: 1.2em; font-size: 0.82rem; color: var(--ink-soft); text-decoration: none; }
+.login-card__back:hover { color: var(--tide); }
+
+/* ---------------- Admin shell ---------------- */
+
+.admin-shell { display: flex; min-height: 100vh; }
+.admin-sidebar {
+  width: 220px; background: var(--tide-deep); color: white;
+  display: flex; flex-direction: column; padding: 1.2em 1em;
+}
+.admin-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin-bottom: 1.6em;
+}
+.admin-sidebar__logo-chip {
+  display: inline-flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.3em;
+  line-height: 0;
+}
+.admin-sidebar__logo { height: 30px; width: auto; display: block; }
+.admin-sidebar__brand-text { font-weight: 800; font-size: 1.05rem; color: #fff; }
+.admin-nav-link {
+  display: block; padding: 0.6em 0.8em; border-radius: 8px;
+  color: rgba(255,255,255,0.75); text-decoration: none; font-size: 0.9rem; margin-bottom: 0.2em;
+}
+.admin-nav-link:hover { background: rgba(255,255,255,0.08); }
+.admin-nav-link--active { background: var(--tide); color: white; font-weight: 600; }
+.admin-sidebar__footer { margin-top: auto; padding-top: 1em; border-top: 1px solid rgba(255,255,255,0.15); }
+.admin-sidebar__user { font-size: 0.78rem; margin-bottom: 0.6em; word-break: break-word; }
+.admin-sidebar__role { color: rgba(255,255,255,0.6); }
+.admin-sidebar__logout { width: 100%; background: rgba(255,255,255,0.1); font-size: 0.82rem; }
+
+.admin-main { flex: 1; padding: 2em 2.4em; max-width: 1100px; }
+
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2em; }
+.section-heading { margin-top: 2em; }
+
+.stat-cards { display: flex; gap: 1em; margin-bottom: 1.5em; }
+.stat-card {
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 1em 1.4em; min-width: 140px;
+}
+.stat-card__value { display: block; font-family: var(--font-mono); font-size: 1.8rem; font-weight: 700; }
+.stat-card__label { font-size: 0.82rem; color: var(--ink-soft); }
+.stat-card--warn .stat-card__value { color: var(--caution); }
+.stat-card--danger .stat-card__value { color: var(--danger); }
+
+.zone-table { display: flex; flex-direction: column; gap: 0.5em; }
+.zone-table__row {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+  align-items: center; gap: 1em;
+  background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 0.8em 1.1em; font-size: 0.9rem;
+}
+.zone-table__actions { display: flex; gap: 0.5em; }
+
+.filter-bar { display: flex; gap: 0.7em; margin-bottom: 1em; max-width: 480px; }
+
+.inline-form { display: flex; flex-wrap: wrap; gap: 0.6em; align-items: flex-end; margin-bottom: 1.2em; }
+.inline-form input, .inline-form select { width: auto; min-width: 150px; margin: 0; }
+
+.audit-table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+.audit-table th, .audit-table td { text-align: left; padding: 0.7em 1em; font-size: 0.85rem; border-bottom: 1px solid var(--line); }
+.audit-table th { background: var(--mist); font-weight: 700; color: var(--ink-soft); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em; }
+.audit-table__fields { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-soft); }
+
+/* ---------------- Zone form ---------------- */
+
+.zone-form { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1.6em; align-items: start; }
+.zone-form__hint { font-size: 0.82rem; color: var(--ink-soft); margin-top: 0.5em; }
+.zone-form__fields { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.4em; }
+.zone-form__row { display: grid; grid-template-columns: 1fr 1fr; gap: 1em; }
+.zone-form__label { font-size: 0.82rem; font-weight: 600; color: var(--ink-soft); display: block; margin-bottom: 0.5em; }
+.zone-form__actions { display: flex; justify-content: flex-end; gap: 0.6em; margin-top: 1em; }
+
+.vehicle-toggle-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4em 1em; margin-bottom: 1.1em; }
+.vehicle-toggle { display: flex; align-items: center; gap: 0.5em; font-weight: 500; font-size: 0.86rem; }
+.vehicle-toggle input { width: auto; }
+
+/* ---------------- Locations sidebar (see LocationsSidebar.tsx) ---------------- */
+
+.locations-sidebar {
+  position: absolute;
+  top: 16px; left: 16px;
+  z-index: 500;
+  width: 300px;
+  max-width: calc(100% - 32px);
+  /* Height fits the content (area list) instead of always stretching to
+     the bottom of the map — a short list no longer leaves a tall block
+     of empty white space below it. */
+  max-height: calc(100% - 32px);
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.locations-sidebar__reopen {
+  position: absolute; top: 16px; left: 16px; z-index: 500;
+  background: var(--surface); color: var(--ink);
+  border-radius: 999px; box-shadow: var(--shadow);
+  padding: 0.55em 1em; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+  border: none;
+  display: inline-flex; align-items: center; gap: 0.4em;
+}
+.locations-sidebar__reopen:hover { background: var(--mist); }
+.locations-sidebar__reopen::before { content: "📍"; font-size: 0.9em; }
+
+@media (max-width: 900px) {
+  .zone-form { grid-template-columns: 1fr; }
+  .public-map-page__body { flex-direction: column; }
+  .zone-panel { width: 100%; max-height: 45vh; }
+  .admin-shell { flex-direction: column; }
+  .admin-sidebar { width: 100%; flex-direction: row; align-items: center; }
+  .admin-sidebar__footer { margin-top: 0; margin-left: auto; border: none; padding: 0; display: flex; align-items: center; gap: 0.8em; }
+}
+
+/* ---------------- Mobile layout (phones) — public map ---------------- */
+@media (max-width: 640px) {
+  /* Topbar: stack brand + layer buttons instead of squeezing into one row */
+  .topbar {
+    flex-wrap: wrap;
+    padding: 0.6em 0.8em;
+    row-gap: 0.5em;
+  }
+  .topbar__brand { font-size: 1rem; }
+  .topbar__layers {
+    order: 3;
+    width: 100%;
+    gap: 0.4em;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 0.1em;
+  }
+  .layer-toggle {
+    font-size: 0.75rem;
+    padding: 0.4em 0.7em;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .topbar__meta { font-size: 0.75rem; }
+
+  /* Legend: pin to the bottom-right, capped to half the screen width so
+     vehicle chips stay clamped to two lines instead of stretching wide. */
+  .legend-panel {
+    top: auto; bottom: 12px; left: auto; right: 12px;
+    width: 190px;
+    max-width: 50vw;
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+
+  /* Locations sidebar: full-width sheet from the top instead of a fixed
+     300px box, height fits the content (capped at 45vh) instead of
+     stretching, so the map stays visible underneath a short list. */
+  .locations-sidebar {
+    top: 8px; left: 8px; right: 8px;
+    width: auto;
+    max-width: none;
+    max-height: 45vh;
+  }
+  .locations-sidebar__reopen { top: 8px; left: 8px; }
+
+  /* Zone detail panel: bottom sheet instead of a right-hand rail */
+  .zone-panel {
+    max-height: 55vh;
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    border-radius: var(--radius) var(--radius) 0 0;
+    animation: slide-up 0.25s ease-out;
+  }
+  @keyframes slide-up { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .recenter-btn { bottom: 12px; right: 12px; }
+  .legend-panel { bottom: 12px; }
+  /* legend sits left of the recenter button so they don't overlap when
+     both are visible in the bottom-right corner */
+  .legend-panel--collapsed { right: 64px; width: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zone-overlay, .water-gauge__fill, .recenter-btn__icon.spin, .zone-panel {
+    animation: none !important;
+  }
+}
+
+.locations-sidebar__header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 0.9em 1em; border-bottom: 1px solid var(--mist);
+}
+.locations-sidebar__close {
+  background: transparent; border: none; font-size: 1.2rem; line-height: 1;
+  cursor: pointer; color: var(--ink-soft); padding: 0.1em 0.3em;
+}
+.locations-sidebar__list { overflow-y: auto; padding: 0.4em 0; }
+.locations-sidebar__area { border-bottom: 1px solid var(--mist); }
+.locations-sidebar__area-header {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: transparent; color: var(--ink); border: none; text-align: left; cursor: pointer;
+  padding: 0.6em 1em; font-weight: 600; font-size: 0.88rem;
+}
+.locations-sidebar__area-header:hover { background: var(--mist); }
+.locations-sidebar__count {
+  background: var(--mist); color: var(--ink); border-radius: 999px; padding: 0.1em 0.55em;
+  font-size: 0.75rem; font-weight: 700;
+}
+.locations-sidebar__table {
+  width: 100%;
+  border-collapse: collapse;
+  padding-bottom: 0.3em;
+}
+.locations-sidebar__table tr {
+  cursor: pointer;
+}
+.locations-sidebar__table tr:hover {
+  background: var(--mist);
+}
+.locations-sidebar__table td {
+  padding: 0.4em 1em;
+  font-size: 0.82rem;
+  border-top: 1px solid var(--mist);
+}
+.locations-sidebar__table tr:first-child td {
+  border-top: none;
+}
+.locations-sidebar__zone-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding-left: 1.6em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
+  width: 100%;
+}
+.locations-sidebar__zone-level {
+  text-align: right;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+}
+.locations-sidebar__dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+}
+
+.area-cluster-pin { display: flex; }
+
+/* ---------------- First-visit tutorial (see TutorialOverlay.tsx) ---------------- */
+
+.tutorial-overlay {
+  /* fixed (not absolute) so it's viewport-relative, matching the
+     getBoundingClientRect() coordinates TutorialOverlay.tsx measures real
+     targets with — the highlight/card boxes are positioned via inline
+     style computed from those live measurements, not hardcoded per step. */
+  position: fixed;
+  inset: 0;
+  z-index: 1500; /* above everything else in .public-map-page__body */
+}
+
+/* Fallback plain dim backdrop, only rendered on a frame where the target
+   element hasn't been measured yet (e.g. it hasn't rendered/loaded), so
+   the page never flashes fully undimmed. Once a target is found, the
+   highlight's own box-shadow spread handles the dimming instead. */
+.tutorial-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 35, 64, 0.55);
+}
+
+/* Spotlight trick: a huge box-shadow spread paints the dark backdrop
+   everywhere except this box's own area, so the real, currently-rendered
+   target element reads as "cut out" and glowing. Position/size come from
+   inline style (live getBoundingClientRect of the actual DOM node) set in
+   TutorialOverlay.tsx, so this stays accurate across screen sizes, the
+   sidebar/legend's collapsed state, and map pans/zooms. */
+.tutorial-highlight {
+  position: fixed;
+  border-radius: var(--radius);
+  pointer-events: none;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.95), 0 0 0 9999px rgba(12, 35, 64, 0.6),
+    0 0 22px rgba(255, 255, 255, 0.85);
+  animation: tutorial-pulse 1.6s ease-in-out infinite;
+  transition: top 0.15s ease-out, left 0.15s ease-out, width 0.15s ease-out, height 0.15s ease-out;
+}
+@keyframes tutorial-pulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(255,255,255,0.95), 0 0 0 9999px rgba(12,35,64,0.6), 0 0 14px rgba(255,255,255,0.6); }
+  50% { box-shadow: 0 0 0 4px rgba(255,255,255,0.95), 0 0 0 9999px rgba(12,35,64,0.6), 0 0 28px rgba(255,255,255,0.95); }
+}
+
+/* A second, smaller spotlight nested inside/near the primary one, used to
+   call out one specific control (e.g. the "Hide legend" button) within a
+   larger highlighted container — distinct color so it doesn't read as a
+   second unrelated target, and it doesn't add its own full-page dimming
+   (that's already handled by the primary .tutorial-highlight). */
+.tutorial-highlight--secondary {
+  position: fixed;
+  border-radius: 999px;
+  pointer-events: none;
+  box-shadow: 0 0 0 3px var(--tide, #1c5fa8), 0 0 14px rgba(28, 95, 168, 0.85);
+  animation: tutorial-pulse-accent 1.2s ease-in-out infinite;
+  transition: top 0.15s ease-out, left 0.15s ease-out, width 0.15s ease-out, height 0.15s ease-out;
+}
+@keyframes tutorial-pulse-accent {
+  0%, 100% { box-shadow: 0 0 0 3px var(--tide, #1c5fa8), 0 0 10px rgba(28,95,168,0.7); }
+  50% { box-shadow: 0 0 0 4px var(--tide, #1c5fa8), 0 0 18px rgba(28,95,168,1); }
+}
+
+.tutorial-card {
+  position: fixed;
+  z-index: 1501;
+  width: 300px;
+  max-width: calc(100% - 32px);
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(12, 35, 64, 0.35);
+  padding: 1.1em 1.2em;
+  animation: tutorial-card-in 0.25s ease-out;
+  transition: top 0.15s ease-out, left 0.15s ease-out;
+}
+@keyframes tutorial-card-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.tutorial-card__eyebrow {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--tide);
+  margin-bottom: 0.3em;
+}
+.tutorial-card h4 { font-size: 1rem; margin-bottom: 0.35em; }
+.tutorial-card p { font-size: 0.86rem; line-height: 1.5; color: var(--ink-soft); margin: 0 0 1em; }
+.tutorial-card__hint { display: block; margin-top: 0.6em; font-weight: 700; color: var(--tide); }
+
+.tutorial-card__footer { display: flex; align-items: center; justify-content: space-between; gap: 0.8em; }
+.tutorial-card__dots { display: flex; gap: 0.35em; }
+.tutorial-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.tutorial-dot--active { background: var(--tide); width: 16px; border-radius: 999px; }
+.tutorial-card__actions { display: flex; gap: 0.5em; }
+.tutorial-card__actions button { padding: 0.45em 0.9em; font-size: 0.82rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-highlight, .tutorial-highlight--secondary, .tutorial-card { animation: none !important; }
+}
