@@ -60,7 +60,6 @@ export default function LocationsSidebar({
                         className="locations-sidebar__dot"
                         style={{ background: PASSABILITY_COLORS[zone.roadPassability] }}
                       />
-                      <span>{zone.name}</span>
                     </td>
                     <td className="locations-sidebar__zone-level">
                       {zone.name}
