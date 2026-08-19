@@ -23,9 +23,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <aside className="admin-sidebar">
         <div className="admin-sidebar__brand">
           <span className="admin-sidebar__logo-chip">
-            <img className="admin-sidebar__logo" src="/logo/bahadvisory_icon.png" alt="Bahadvisory" />
+            <img className="topbar__logo" src="/logo/bahadvisory_icon.png" alt="Bahadvisory icon" />
+          <img className="topbar__text-logo" src="/logo/bahadvisory_textlogo.png" alt="Bahadvisory" />
           </span>
-          <span className="admin-sidebar__brand-text">Bahadvisory</span>
         </div>
         <nav>
           {navItems.map((item) => (

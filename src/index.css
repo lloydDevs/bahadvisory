@@ -480,8 +480,7 @@ label > input, label > select, label > textarea { margin-top: 0.35em; }
   display: inline-flex;
   align-items: center;
   background: #fff;
-  border-radius: 999px;
-  padding: 0.3em;
+  padding: 0.7em;
   line-height: 0;
 }
 .admin-sidebar__logo { height: 30px; width: auto; display: block; }
